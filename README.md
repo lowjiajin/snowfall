@@ -34,7 +34,10 @@ id_generator = Snowfall(
     generator_id=0
 )
 ```
-Successively calling `get_id()` will return valid GUIDs. Snowfall throttles the issuing speed to ensure that no more than 4096 GUIDs are generated per ms. 
+Successively calling `get_id()` will return valid GUIDs. 
+
+> :warning: **Possible throttling**: Snowfall throttles the issuing speed to ensure that no more than 4096 GUIDs are generated per ms.
+
 ```
 id_generator.get_id()
 >>> 4611686027683621110
@@ -67,7 +70,7 @@ id_generator = Snowfall(=
 #### For multi-process or distributed projects
 For multi-process, multi-container projects, we need to persist the `generator_id` assignment and liveliness information to a database shared by all containers writing to the same schema. For this, we provide a `DatabaseAssigner` that supports any SQLAlchemy-compatible database.
 
-> :warning: **Instantiating multiple assigners**: All database assigners wih the same `engine_url` need to share the same `epoch_start`.
+> :warning: **Instantiating assigners**: All database assigners wih the same `engine_url` need to share the same `epoch_start` Otherwise, a ValueError is thrown.
 
 > :warning: **Permissions required**: The `DatabaseAssigner` creates new tables `snowfall_properties` and `snowfall_manifest`, and performs CRUD operations on them.
 
