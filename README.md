@@ -4,7 +4,7 @@ Snowfall is a lightweight 64-bit integer based GUID generator inspired by the Tw
 2. Have superior indexing characteristics on most DBMSes.
 3. Take up half the space.
 
-## Technicalities
+## GUID Specification
 A Snowfall GUID consists of:
 ```
 1  bit reserved
@@ -82,4 +82,7 @@ id_generator = Snowfall(=
 #### Technical notes
 A `generator_id` is reserved for as long as the Snowfall instance is capable of transmitting liveliness information to the generator manifest, and released when the last liveliness update was more than a set amount of time ago. This time is set with `liveliness_probe_ms`.
 
-When a `generator_id` is released, it is not struck from the manifest. Instead, new Snowfall instances are able to reserve it. This is to eliminate the need for a separate client to run regular cleanup jobs on the manifest, and keeps Snowfall as lightweight as possible.  
+When a `generator_id` is released, it is not struck from the manifest. Instead, new Snowfall instances are able to reserve it. This is to eliminate the need for a separate client to run regular cleanup jobs on the manifest, and keeps Snowfall as lightweight as possible.
+
+## Contributions
+We are looking to add support for generators that implement the Snowfall GUID spec in other languages. Please contact [https://github.com/lowjiajin](@lowjiajin) for more details.
