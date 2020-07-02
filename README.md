@@ -19,6 +19,12 @@ As such, Snowfall returns unique GUIDs for as long as:
 3. The lifetime of the system is no more than `2^41ms` (~70 years) from the epoch time set.
 
 ## Developer Guide
+### Installation
+A complete installation of Snowfall with all [`id_assigners`](#enforcing-unique-generator_ids) and their dependencies.
+```
+pip install snowfall
+```
+
 ### Quickstart
 To start generating IDs, simply create a `Snowfall` instance with a `generator_id`.
 ```
@@ -37,7 +43,9 @@ id_generator.get_id()
 ```
 
 ### Enforcing unique `generator_ids`
-The global uniqueness of Snowfall's IDs only hold if each Snowfall instance has a unique `generator_id`. Ideally, we want to throw an exception when an instance is initialized with a `generator_id` that is already in use. The `id_assigners` module contains classes that enforce this constraint by automating the assignment of `generator_ids` to Snowfall instances, using a shared manifest of available and reserved `generator_ids`. If all available `generator_ids` are reserved by active Snowfall instances, further attempts at instantiation would result in an `OverflowError`.
+The global uniqueness of Snowfall's IDs only hold if each Snowfall instance has a unique `generator_id`. Ideally, we want to throw an exception when an instance is initialized with a `generator_id` that is already in use. 
+
+The `id_assigners` module contains classes that enforce this constraint by automating the assignment of `generator_ids` to Snowfall instances, using a shared manifest of available and reserved `generator_ids`. If all available `generator_ids` are reserved by active Snowfall instances, further attempts at instantiation would result in an `OverflowError`.
 
 #### For single-process projects
 For single-process projects, we provide a `SimpleIDAssigner` that records the manifest as a Python data structure. All Snowfall instances need to share the same SimpleAssigner instance.
@@ -85,4 +93,9 @@ A `generator_id` is reserved for as long as the Snowfall instance is capable of 
 When a `generator_id` is released, it is not struck from the manifest. Instead, new Snowfall instances are able to reserve it. This is to eliminate the need for a separate client to run regular cleanup jobs on the manifest, and keeps Snowfall as lightweight as possible.
 
 ## Contributions
-We are looking to add support for generators that implement the Snowfall GUID spec in other languages. Please contact [@lowjiajin](https://github.com/lowjiajin) for more details.
+We are looking to:
+1) Add support for generators that implement the Snowfall GUID spec in other languages.
+2) Improve the speed of Snowfall by converting the codebase to Cython.
+3) Declare extras for the `pip install` process, to reduce unnecessary dependencies.
+
+Please contact [@lowjiajin](https://github.com/lowjiajin) for more details.
