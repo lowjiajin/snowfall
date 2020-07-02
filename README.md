@@ -9,13 +9,13 @@ A Snowfall GUID consists of:
 ```
 1  bit reserved
 40 bits for the ms since a custom epoch time
-12 bits for a looping counter
-11 bits for a generator id
+11 bits for a looping counter
+12 bits for a generator id
 ```
 
 As such, Snowfall returns unique GUIDs for as long as:
-1. The generator id is within `[0-2048)`.
-2. No more than `4096` GUIDs are generated within one ms.
+1. The generator id is within `[0, 4096)`.
+2. No more than `2048` GUIDs are generated within one ms.
 3. The lifetime of the system is no more than `2^41ms` (~70 years) from the epoch time set.
 
 ## Developer Guide
@@ -34,14 +34,14 @@ id_generator = Snowfall(
     generator_id=0
 )
 ```
-Successively calling `get_id()` will return valid GUIDs. 
+Successively calling `get_guid()` will return valid GUIDs. 
 
-> :warning: **Possible throttling**: Snowfall throttles the issuing speed to ensure that no more than 4096 GUIDs are generated per ms.
+> :warning: **Possible throttling**: Snowfall throttles the issuing speed to ensure that no more than 2048 GUIDs are generated per ms.
 
 ```
-id_generator.get_id()
+id_generator.get_guid()
 >>> 4611686027683621110
-id_generator.get_id()
+id_generator.get_guid()
 >>> 6385725700183638596
 ```
 
