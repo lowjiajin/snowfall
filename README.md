@@ -7,8 +7,7 @@ Snowfall is a lightweight 64-bit integer based GUID generator inspired by the Tw
 ## GUID Specification
 A Snowfall GUID consists of:
 ```
-1  bit reserved
-40 bits for the ms since a custom epoch time
+41 bits for the ms since a custom epoch time
 11 bits for a looping counter
 12 bits for a generator id
 ```

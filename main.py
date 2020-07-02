@@ -7,7 +7,7 @@ from id_assigners.abstracts import AbstractAssigner
 
 class Snowfall:
 
-    MAX_MS_SINCE_EPOCH = 2 ** 40 - 1
+    MAX_MS_SINCE_EPOCH = 2 ** 41 - 1
     MAX_LOOPING_COUNT = 2 ** 11 - 1
     MAX_GENERATOR_ID = 2 ** 12 - 1
 
@@ -20,7 +20,7 @@ class Snowfall:
         """
         A Snowfall object that generates GUIDs.
         :param generator_id: A number between [0, 4096) that uniquely identifies this Snowfall instance.
-        :param epoch_start: GUIDs are unique for up to 2^40ms (~70 years) from the epoch start.
+        :param epoch_start: GUIDs are unique for up to 2^41ms (~70 years) from the epoch start.
         :param id_assigner: An IDAssigner to help coordinate the generator_id and epoch_start across multiple
                             Snowfall instances.
         """
@@ -52,13 +52,13 @@ class Snowfall:
 
     def _get_ms_since_epoch(self) -> int:
         """
-        40 bit integer representing the number of ms since a user-definable epoch start.
+        41 bit integer representing the number of ms since a user-definable epoch start.
         """
         current_unix_timestamp = int(datetime.utcnow().timestamp() * 1000)
         ms_since_epoch = current_unix_timestamp - self.epoch_start
 
         if ms_since_epoch > self.MAX_MS_SINCE_EPOCH:
-            raise OverflowError(f"ms_since_epoch: {ms_since_epoch}, it has been >2^40ms since epoch_start")
+            raise OverflowError(f"ms_since_epoch: {ms_since_epoch}, it has been >2^41ms since epoch_start")
 
         return ms_since_epoch
 
