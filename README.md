@@ -85,4 +85,4 @@ A `generator_id` is reserved for as long as the Snowfall instance is capable of 
 When a `generator_id` is released, it is not struck from the manifest. Instead, new Snowfall instances are able to reserve it. This is to eliminate the need for a separate client to run regular cleanup jobs on the manifest, and keeps Snowfall as lightweight as possible.
 
 ## Contributions
-We are looking to add support for generators that implement the Snowfall GUID spec in other languages. Please contact [https://github.com/lowjiajin](@lowjiajin) for more details.
+We are looking to add support for generators that implement the Snowfall GUID spec in other languages. Please contact [@lowjiajin](https://github.com/lowjiajin) for more details.
