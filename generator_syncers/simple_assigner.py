@@ -71,7 +71,7 @@ class SimpleSyncer(BaseSyncer):
         Adds a schema group object to the class
         :param schema_group_name:  Unique name that identifies the schema group.
         :param liveliness_probe_s: Frequency with which the SimpleSyncer instances update their liveliness
-                                    in the _manifest.
+                                    in the manifest.
         :param epoch_start_date:   GUIDs are unique for up to 2^41ms (~70 years) from the epoch start date.
         """
         if epoch_start_date > datetime.utcnow():

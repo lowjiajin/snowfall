@@ -25,7 +25,7 @@ pip install snowfall
 ```
 
 ### Quickstart
-To start generating IDs, simply create a `Snowfall`.
+To start generating IDs, simply instantiate a `Snowfall`.
 ```
 from snowfall import Snowfall
 
@@ -48,7 +48,7 @@ The global uniqueness of Snowfall's IDs only hold if each Snowfall instance rese
 The `generator_syncers` module contains classes that enforce this constraint by automating the reservation and release of `generator_ids` by Snowfall instances, using a shared manifest. If all available `generator_ids` are reserved by active Snowfall instances, further attempts at instantiation would result in an `OverflowError`.
 
 #### For single-process projects
-For single-process projects, we provide a `SimpleSyncer` that records the _manifest as a Python data structure. First, create a new global schema group, and then bind the Snowfall instance to it.
+For single-process projects, we provide a `SimpleSyncer` that records the manifest as a Python data structure. First, create a new global schema group, and then bind the Snowfall instance to it.
 ```
 from datetime import datetime
 from snowfall import Snowfall
@@ -77,9 +77,9 @@ SimpleSyncer.create_schema_group(
 #### For multi-process or distributed projects
 For multi-process, multi-container projects, we need to persist the `generator_id` assignment and liveliness information to a database shared by all containers writing to the same schema. For this, we provide a `DatabaseSyncer` that supports any SQLAlchemy-compatible database.
 
-> :warning: **Instantiating syncers**: All database syncers wih the same `engine_url` need to share the same `epoch_start` Otherwise, a ValueError is thrown.
+> :warning: **Instantiating syncers**: All database syncers with the same `engine_url` need to share the same `epoch_start` Otherwise, a ValueError is thrown.
 
-> :warning: **Permissions required**: The `DatabaseSyncer` creates new tables `snowfall_properties` and `snowfall__manifest`, and performs CRUD operations on them.
+> :warning: **Permissions required**: The `DatabaseSyncer` creates new tables `snowfall_properties` and `snowfall_manifest`, and performs CRUD operations on them.
 
 ```
 from datetime import datetime
