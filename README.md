@@ -25,13 +25,11 @@ pip install snowfall
 ```
 
 ### Quickstart
-To start generating IDs, simply create a `Snowfall` instance with a `generator_id`.
+To start generating IDs, simply create a `Snowfall`.
 ```
 from snowfall import Snowfall
 
-id_generator = Snowfall(
-    generator_id=0
-)
+id_generator = Snowfall()
 ```
 Successively calling `get_guid()` will return valid GUIDs. 
 
@@ -50,19 +48,29 @@ The global uniqueness of Snowfall's IDs only hold if each Snowfall instance has 
 The `id_assigners` module contains classes that enforce this constraint by automating the assignment of `generator_ids` to Snowfall instances, using a shared manifest of available and reserved `generator_ids`. If all available `generator_ids` are reserved by active Snowfall instances, further attempts at instantiation would result in an `OverflowError`.
 
 #### For single-process projects
-For single-process projects, we provide a `SimpleIDAssigner` that records the manifest as a Python data structure. All Snowfall instances need to share the same SimpleAssigner instance.
+For single-process projects, we provide a `SimpleIDAssigner` that records the _manifest as a Python data structure. First, create a new global schema group, and then bind the Snowfall instance to it.
 ```
 from datetime import datetime
 from snowfall import Snowfall
 from snowfall.id_assigners import SimpleAssigner
 
-id_assigner = SimpleAssigner(
-    liveliness_probe_ms=5000
-    epoch_start=datetime(2020, 1, 1)
+SimpleAssigner.create_schema_group(
+    schema_group_name="example_schema_group"
 )
 
-id_generator = Snowfall(=
-    id_assigner=id_assigner
+id_generator = Snowfall(
+    id_assigner_type=SimpleAssigner,
+    schema_group_name="example_schema_group"
+)
+```
+
+You can also customize the liveliness probe frequency and the epoch start as follows:
+
+```
+SimpleAssigner.create_schema_group(
+    schema_group_name="example_schema_group"
+    liveliness_probe_s=10
+    epoch_start=datetime(2020, 1, 1)
 )
 ```
 
@@ -71,21 +79,22 @@ For multi-process, multi-container projects, we need to persist the `generator_i
 
 > :warning: **Instantiating assigners**: All database assigners wih the same `engine_url` need to share the same `epoch_start` Otherwise, a ValueError is thrown.
 
-> :warning: **Permissions required**: The `DatabaseAssigner` creates new tables `snowfall_properties` and `snowfall_manifest`, and performs CRUD operations on them.
+> :warning: **Permissions required**: The `DatabaseAssigner` creates new tables `snowfall_properties` and `snowfall__manifest`, and performs CRUD operations on them.
 
 ```
 from datetime import datetime
 from snowfall import Snowfall
 from snowfall.id_assigners import DatabaseAssigner
 
-id_assigner = DatabaseAssigner(
-    engine_url="postgresql://user:pass@host:port/db"
-    liveliness_probe_ms=5000,
+DatabaseAssigner.create_schema_group(
+    schema_group_name="example_schema_group"
+    liveliness_probe_s=10,
     epoch_start=datetime(2020, 1, 1)
 )
 
 id_generator = Snowfall(=
-    id_assigner=id_assigner
+    id_assigner_type=DatabaseAssigner,
+    engine_url="postgresql://user:pass@host:port/db"
 )
 ```
 

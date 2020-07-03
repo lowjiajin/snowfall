@@ -1,45 +1,32 @@
-from typing import Optional, Union
+from typing import Type
 from datetime import datetime
 from time import sleep
 
-from id_assigners.abstracts import AbstractAssigner
+from id_assigners.abstracts import BaseAssigner
+from id_assigners.simple_assigner import SimpleAssigner
+from utils import get_current_timestamp_ms
 
 
 class Snowfall:
 
     MAX_MS_SINCE_EPOCH = 2 ** 41 - 1
     MAX_LOOPING_COUNT = 2 ** 11 - 1
-    MAX_GENERATOR_ID = 2 ** 12 - 1
 
     def __init__(
             self,
-            generator_id: Optional[int] = None,
-            epoch_start: Union[datetime] = datetime(2020, 1, 1),
-            id_assigner: Optional[AbstractAssigner] = None
+            id_assigner_type: Type[BaseAssigner] = SimpleAssigner,
+            **kwargs
     ):
         """
         A Snowfall object that generates GUIDs.
-        :param generator_id: A number between [0, 4096) that uniquely identifies this Snowfall instance.
-        :param epoch_start: GUIDs are unique for up to 2^41ms (~70 years) from the epoch start.
-        :param id_assigner: An IDAssigner to help coordinate the generator_id and epoch_start across multiple
-                            Snowfall instances.
+        :param id_assigner_type: Specify a IDAssigner class. An IDAssigner instance will be created to coordinate
+                                 the generator_id and epoch_start across multiple Snowfall instances.
         """
-
-        if id_assigner is None:
-            self.generator_id = generator_id
-            self.epoch_start = epoch_start
-        else:
-            self.generator_id = id_assigner.claim_generator_id()
-            self.epoch_start = id_assigner.get_epoch_start()
-
-        if self.generator_id > self.MAX_GENERATOR_ID:
-            raise ValueError(f"generator_id: {generator_id} cannot be >= 4096")
-        elif self.epoch_start > datetime.utcnow():
-            raise ValueError(f"epoch_start: {epoch_start} cannot be in the future of the current UTC time")
-
-        self.epoch_start = int(self.epoch_start.timestamp() * 1000)
+        self.id_assigner = id_assigner_type(**kwargs)
+        self.generator_id = self.id_assigner.generator_id
+        self.EPOCH_START_MS = int(self.id_assigner.epoch_start_date.timestamp() * 1000)
         self.looping_counter = 0
-        self.guid_last_generated_at = self.epoch_start
+        self.guid_last_generated_at = self.EPOCH_START_MS
 
     def get_guid(self) -> int:
         """
@@ -54,10 +41,12 @@ class Snowfall:
         """
         41 bit integer representing the number of ms since a user-definable epoch start.
         """
-        current_unix_timestamp = int(datetime.utcnow().timestamp() * 1000)
-        ms_since_epoch = current_unix_timestamp - self.epoch_start
+        current_timestamp_ms = get_current_timestamp_ms()
+        ms_since_epoch = current_timestamp_ms - self.EPOCH_START_MS
 
-        if ms_since_epoch > self.MAX_MS_SINCE_EPOCH:
+        if not self.id_assigner.is_alive(current_timestamp_ms=current_timestamp_ms):
+            raise RuntimeError("Generator ID no longer reserved by this instance.")
+        elif ms_since_epoch > self.MAX_MS_SINCE_EPOCH:
             raise OverflowError(f"ms_since_epoch: {ms_since_epoch}, it has been >2^41ms since epoch_start")
 
         return ms_since_epoch
@@ -74,7 +63,7 @@ class Snowfall:
             self.looping_counter = 0
         else:
             if self.looping_counter > self.MAX_LOOPING_COUNT:
-                s_until_next_ms = (ms_since_epoch + 1) / 1000 - datetime.now().timestamp()
+                s_until_next_ms = (ms_since_epoch + 1) / 1000 - datetime.utcnow().timestamp()
                 sleep(secs=max(s_until_next_ms, 0))
             self.looping_counter += 1
         return self.looping_counter
