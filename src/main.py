@@ -2,8 +2,7 @@ from typing import Type
 from datetime import datetime
 from time import sleep
 
-from generator_syncers.abstracts import BaseSyncer
-from generator_syncers.simple_syncer import SimpleSyncer
+from generator_syncers import BaseSyncer, SimpleSyncer
 from utils import get_current_timestamp_ms
 
 
