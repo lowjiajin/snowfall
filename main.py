@@ -31,7 +31,7 @@ class Snowfall:
         """
         self.generator_syncer = generator_syncer_type(**kwargs)
         self.generator_id = self.generator_syncer.generator_id
-        self.EPOCH_START_MS = int(self.generator_syncer.epoch_start_date.timestamp() * 1000)
+        self.EPOCH_START_MS = int(self.generator_syncer.epoch_start_ms * 1000)
         self.looping_counter = 0
         self.guid_last_generated_at = self.EPOCH_START_MS
 

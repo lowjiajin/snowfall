@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from datetime import datetime
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from utils import get_current_timestamp_ms
@@ -67,7 +66,7 @@ class BaseSyncer(ABC):
 
     @property
     @abstractmethod
-    def epoch_start_date(self) -> datetime:
+    def epoch_start_ms(self) -> int:
         raise NotImplementedError
 
     @classmethod

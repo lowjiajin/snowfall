@@ -8,7 +8,7 @@ from utils import get_current_timestamp_ms
 
 SchemaGroup = namedtuple(
         typename="SchemaGroup",
-        field_names=("liveliness_probe_s", "epoch_start_date", "manifest")
+        field_names=("liveliness_probe_s", "epoch_start_ms", "manifest")
 )
 
 
@@ -32,7 +32,7 @@ class SimpleSyncer(BaseSyncer):
 
         self._liveliness_probe_s = schema_group.liveliness_probe_s
         self._ms_to_release_generator_id = self._liveliness_probe_s * 1000 * self.PROBE_MISSES_TO_RELEASE
-        self._epoch_start_date = schema_group.epoch_start_date
+        self._epoch_start_ms = schema_group.epoch_start_ms
         super().__init__()
 
     @property
@@ -52,8 +52,8 @@ class SimpleSyncer(BaseSyncer):
         return self._last_alive_ms
 
     @property
-    def epoch_start_date(self) -> datetime:
-        return self._epoch_start_date
+    def epoch_start_ms(self) -> int:
+        return self._epoch_start_ms
 
     @classmethod
     def create_schema_group(
@@ -81,7 +81,7 @@ class SimpleSyncer(BaseSyncer):
             )
             cls.schema_groups[schema_group_name] = SchemaGroup(
                 liveliness_probe_s=liveliness_probe_s,
-                epoch_start_date=epoch_start_date,
+                epoch_start_ms=epoch_start_date.timestamp(),
                 manifest=manifest
             )
 

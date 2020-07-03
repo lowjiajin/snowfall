@@ -70,7 +70,7 @@ You can also customize the liveliness probe frequency and the epoch start as fol
 SimpleSyncer.create_schema_group(
     schema_group_name="example_schema_group"
     liveliness_probe_s=10
-    epoch_start=datetime(2020, 1, 1)
+    epoch_start_date=datetime(2020, 1, 1)
 )
 ```
 
@@ -79,7 +79,7 @@ For multi-process, multi-container projects, we need to persist the `generator_i
 
 > :warning: **Instantiating syncers**: All database syncers with the same `engine_url` need to share the same `epoch_start` Otherwise, a ValueError is thrown.
 
-> :warning: **Permissions required**: The `DatabaseSyncer` creates new tables `snowfall_properties` and `snowfall_manifest`, and performs CRUD operations on them.
+> :warning: **Permissions required**: The `DatabaseSyncer` creates new tables `snowfall_{schema_group_name}_properties` and `snowfall_{schema_group_name}_manifest`, and performs CRUD operations on them.
 
 ```
 from datetime import datetime
@@ -89,7 +89,7 @@ from snowfall.generator_syncers.database_syncer import DatabaseSyncer
 DatabaseSyncer.create_schema_group(
     schema_group_name="example_schema_group"
     liveliness_probe_s=10,
-    epoch_start=datetime(2020, 1, 1)
+    epoch_start_date=datetime(2020, 1, 1)
 )
 
 id_generator = Snowfall(=
