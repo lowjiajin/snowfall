@@ -9,7 +9,7 @@ class BaseSyncer(ABC):
 
     def __init__(self):
         """
-        All assigners have a background task which updates the liveliness of its Snowfall instance in the manifest
+        All syncers have a background task which updates the liveliness of its Snowfall instance in the manifest
         at periodic intervals
         """
         self.scheduler = BackgroundScheduler()
@@ -25,7 +25,7 @@ class BaseSyncer(ABC):
             current_timestamp_ms: int
     ):
         """
-        The assigner, and by extension its Snowfall instance, is alive iff its generator id is still reserved.
+        The syncer, and by extension its Snowfall instance, is alive iff its generator id is still reserved.
         """
         ms_since_last_updated = current_timestamp_ms - self.last_alive_ms
         if ms_since_last_updated <= self.ms_to_release_generator_id:

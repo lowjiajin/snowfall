@@ -52,7 +52,7 @@ For single-process projects, we provide a `SimpleSyncer` that records the _manif
 ```
 from datetime import datetime
 from snowfall import Snowfall
-from snowfall.generator_syncers.simple_assigner import SimpleSyncer
+from snowfall.generator_syncers.simple_syncer import SimpleSyncer
 
 SimpleSyncer.create_schema_group(
     schema_group_name="example_schema_group"
@@ -77,14 +77,14 @@ SimpleSyncer.create_schema_group(
 #### For multi-process or distributed projects
 For multi-process, multi-container projects, we need to persist the `generator_id` assignment and liveliness information to a database shared by all containers writing to the same schema. For this, we provide a `DatabaseSyncer` that supports any SQLAlchemy-compatible database.
 
-> :warning: **Instantiating assigners**: All database assigners wih the same `engine_url` need to share the same `epoch_start` Otherwise, a ValueError is thrown.
+> :warning: **Instantiating syncers**: All database syncers wih the same `engine_url` need to share the same `epoch_start` Otherwise, a ValueError is thrown.
 
 > :warning: **Permissions required**: The `DatabaseSyncer` creates new tables `snowfall_properties` and `snowfall__manifest`, and performs CRUD operations on them.
 
 ```
 from datetime import datetime
 from snowfall import Snowfall
-from snowfall.generator_syncers.database_assigner import DatabaseSyncer
+from snowfall.generator_syncers.database_syncer import DatabaseSyncer
 
 DatabaseSyncer.create_schema_group(
     schema_group_name="example_schema_group"
