@@ -52,7 +52,7 @@ For single-process projects, we provide a `SimpleIDAssigner` that records the _m
 ```
 from datetime import datetime
 from snowfall import Snowfall
-from snowfall.id_assigners import SimpleAssigner
+from snowfall.id_assigners.simple_assigner import SimpleAssigner
 
 SimpleAssigner.create_schema_group(
     schema_group_name="example_schema_group"
@@ -84,7 +84,7 @@ For multi-process, multi-container projects, we need to persist the `generator_i
 ```
 from datetime import datetime
 from snowfall import Snowfall
-from snowfall.id_assigners import DatabaseAssigner
+from snowfall.id_assigners.database_assigner import DatabaseAssigner
 
 DatabaseAssigner.create_schema_group(
     schema_group_name="example_schema_group"
