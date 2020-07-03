@@ -2,8 +2,8 @@ from typing import Type
 from datetime import datetime
 from time import sleep
 
-from generator_syncers import BaseSyncer, SimpleSyncer
-from utils import get_current_timestamp_ms
+from snowfall.generator_syncers import BaseSyncer, SimpleSyncer
+from snowfall.utils import get_current_timestamp_ms
 
 
 class Snowfall:

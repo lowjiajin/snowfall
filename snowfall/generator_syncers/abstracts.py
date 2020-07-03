@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from apscheduler.schedulers.background import BackgroundScheduler
 
-from utils import get_current_timestamp_ms
+from snowfall.utils import get_current_timestamp_ms
 
 
 class BaseSyncer(ABC):

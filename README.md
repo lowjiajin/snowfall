@@ -25,10 +25,12 @@ pip install snowfall
 ```
 
 ### Quickstart
-To start generating IDs, simply instantiate a `Snowfall`.
+To start generating IDs, simply create a schema group and start a `Snowfall`. 
 ```
 from snowfall import Snowfall
+from snowfall.generator_syncers import SimpleSyncer
 
+SimpleSyncer.create_schema_group()
 id_generator = Snowfall()
 ```
 Successively calling `get_guid()` will return valid GUIDs. 
@@ -49,10 +51,11 @@ The `generator_syncers` module contains classes that enforce this constraint by 
 
 #### For single-process projects
 For single-process projects, we provide a `SimpleSyncer` that records the manifest as a Python data structure. First, create a new global schema group, and then bind the Snowfall instance to it.
+
+All `Snowfall` instances that share the same schema group will not create duplicate GUIDs.
 ```
-from datetime import datetime
 from snowfall import Snowfall
-from snowfall.generator_syncers.simple_syncer import SimpleSyncer
+from snowfall.generator_syncers import SimpleSyncer
 
 SimpleSyncer.create_schema_group(
     schema_group_name="example_schema_group"
@@ -84,7 +87,7 @@ For multi-process, multi-container projects, we need to persist the `generator_i
 ```
 from datetime import datetime
 from snowfall import Snowfall
-from snowfall.generator_syncers.database_syncer import DatabaseSyncer
+from snowfall.generator_syncers import DatabaseSyncer
 
 DatabaseSyncer.create_schema_group(
     schema_group_name="example_schema_group"

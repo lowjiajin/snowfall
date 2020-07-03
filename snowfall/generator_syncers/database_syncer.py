@@ -9,8 +9,8 @@ from sqlalchemy.orm.scoping import ScopedSession
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.engine.base import Engine
 
-from generator_syncers.abstracts import BaseSyncer
-from utils import get_current_timestamp_ms
+from snowfall.generator_syncers.abstracts import BaseSyncer
+from snowfall.utils import get_current_timestamp_ms
 
 
 class DatabaseSyncer(BaseSyncer):

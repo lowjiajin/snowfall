@@ -2,8 +2,8 @@ from datetime import datetime
 from collections import namedtuple
 import numpy as np
 
-from generator_syncers.abstracts import BaseSyncer
-from utils import get_current_timestamp_ms
+from snowfall.generator_syncers.abstracts import BaseSyncer
+from snowfall.utils import get_current_timestamp_ms
 
 
 SchemaGroup = namedtuple(
