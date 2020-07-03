@@ -9,8 +9,15 @@ from utils import get_current_timestamp_ms
 
 class Snowfall:
 
-    MAX_MS_SINCE_EPOCH = 2 ** 41 - 1
-    MAX_LOOPING_COUNT = 2 ** 11 - 1
+    BITS_FOR_MS_SINCE_EPOCH = 41
+    BITS_FOR_LOOPING_COUNT = 11
+    BITS_FOR_GENERATOR_ID = 12
+
+    OFFSET_FOR_LOOPING_COUNT = BITS_FOR_GENERATOR_ID
+    OFFSET_FOR_MS_SINCE_EPOCH = OFFSET_FOR_LOOPING_COUNT + BITS_FOR_LOOPING_COUNT
+
+    MAX_MS_SINCE_EPOCH = 2 ** BITS_FOR_MS_SINCE_EPOCH - 1
+    MAX_LOOPING_COUNT = 2 ** BITS_FOR_LOOPING_COUNT - 1
 
     def __init__(
             self,
@@ -75,8 +82,8 @@ class Snowfall:
         """
         Combines the ms_since_epoch, looping_count, and generator_id according to the Snowfall GUID spec.
         """
-        ms_since_epoch_part = ms_since_epoch << 23
-        looping_count_part = self.looping_counter << 12
+        ms_since_epoch_part = ms_since_epoch << self.OFFSET_FOR_MS_SINCE_EPOCH
+        looping_count_part = self.looping_counter << self.OFFSET_FOR_LOOPING_COUNT
         guid = ms_since_epoch_part + looping_count_part + self.generator_id
         self.guid_last_generated_at = ms_since_epoch
         return guid

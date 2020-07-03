@@ -7,6 +7,9 @@ from utils import get_current_timestamp_ms
 
 class BaseSyncer(ABC):
 
+    PROBE_MISSES_TO_RELEASE = 2
+    MAX_GENERATOR_ID = 2 ** 12 - 1
+
     def __init__(self):
         """
         All syncers have a background task which updates the liveliness of its Snowfall instance in the manifest
@@ -20,6 +23,9 @@ class BaseSyncer(ABC):
         )
         self.scheduler.start()
 
+        self._last_alive_ms = 0
+        self._generator_id = self._claim_generator_id()
+
     def is_alive(
             self,
             current_timestamp_ms: int
@@ -27,7 +33,7 @@ class BaseSyncer(ABC):
         """
         The syncer, and by extension its Snowfall instance, is alive iff its generator id is still reserved.
         """
-        ms_since_last_updated = current_timestamp_ms - self.last_alive_ms
+        ms_since_last_updated = current_timestamp_ms - self._last_alive_ms
         if ms_since_last_updated <= self.ms_to_release_generator_id:
             return True
         else:
@@ -36,7 +42,7 @@ class BaseSyncer(ABC):
     def update_liveliness_job(self):
         self._set_liveliness(
             current_timestamp_ms=get_current_timestamp_ms(),
-            generator_id=self.generator_id
+            generator_id=self._generator_id
         )
 
     @property

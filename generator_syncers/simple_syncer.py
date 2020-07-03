@@ -14,9 +14,6 @@ SchemaGroup = namedtuple(
 
 class SimpleSyncer(BaseSyncer):
 
-    PROBE_MISSES_TO_RELEASE = 2
-    MAX_GENERATOR_ID = 2 ** 12 - 1
-
     schema_groups = dict()
 
     def __init__(
@@ -36,8 +33,6 @@ class SimpleSyncer(BaseSyncer):
         self._liveliness_probe_s = schema_group.liveliness_probe_s
         self._ms_to_release_generator_id = self._liveliness_probe_s * 1000 * self.PROBE_MISSES_TO_RELEASE
         self._epoch_start_date = schema_group.epoch_start_date
-        self._last_alive_ms = 0
-        self._generator_id = self._claim_generator_id()
         super().__init__()
 
     @property

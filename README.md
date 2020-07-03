@@ -37,9 +37,9 @@ Successively calling `get_guid()` will return valid GUIDs.
 
 ```
 id_generator.get_guid()
->>> 4611686027683621110
+>>> 133494887688437760
 id_generator.get_guid()
->>> 6385725700183638596
+>>> 133494896085434368
 ```
 
 ### Enforcing unique `generator_ids`
