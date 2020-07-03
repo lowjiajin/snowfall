@@ -24,9 +24,10 @@ class DatabaseSyncer(BaseSyncer):
     ):
         """
         A DatabaseSyncer instance that reserves a generator_id for its associated Snowfall instance.
+        :param engine_url: The URL to connect to the database: "dbms_type://user:pass@host:port/db"
         :param schema_group_name: The schema group we want to associate this SimpleSyncer with.
         """
-        self.engine, self.session_factory, base = self._initialize_engine(engine_url)
+        self.engine, self.session_factory, base = self._initialize_orm(engine_url)
         (
             self.manifest_table_name,
             self.properties_table_name,
@@ -79,7 +80,7 @@ class DatabaseSyncer(BaseSyncer):
         if epoch_start_date > datetime.utcnow():
             raise ValueError(f"epoch_start_date: {epoch_start_date} cannot be in the future of the current UTC time.")
 
-        engine, session_factory, base = cls._initialize_engine(engine_url)
+        engine, session_factory, base = cls._initialize_orm(engine_url)
         manifest_table_name, properties_table_name, manifest_row_class, properties_class = cls._generate_orm_classes(
             base=base,
             schema_group_name=schema_group_name
@@ -99,9 +100,12 @@ class DatabaseSyncer(BaseSyncer):
         )
 
     @staticmethod
-    def _initialize_engine(
+    def _initialize_orm(
             engine_url: str
     ) -> Tuple[Engine, ScopedSession, Any]:
+        """
+        Instantiates the relevant engines, sessions, and base classes needed for the SQLAlchemy ORM to run.
+        """
         engine = create_engine(engine_url)
         session_factory = scoped_session(sessionmaker(bind=engine))
         base = declarative_base()
@@ -112,6 +116,9 @@ class DatabaseSyncer(BaseSyncer):
             base: Any,
             schema_group_name: str
     ) -> Tuple[str, str, Any, Any]:
+        """
+        Defines the base classes that map to tables in our DBMS, and their columns.
+        """
         manifest_table_name = f"snowfall_{schema_group_name}_manifest"
         properties_table_name = f"snowfall_{schema_group_name}_properties"
 
@@ -138,6 +145,9 @@ class DatabaseSyncer(BaseSyncer):
             manifest_table_name: str,
             properties_table_name: str
     ) -> None:
+        """
+        One-time operation to create the manifest and properties tables if they don't already exist.
+        """
         if engine.dialect.has_table(engine, manifest_table_name):
             raise RuntimeError(f"Manifest for schema group: {manifest_table_name} already exists in database.")
         elif engine.dialect.has_table(engine, properties_table_name):
@@ -154,6 +164,9 @@ class DatabaseSyncer(BaseSyncer):
             manifest_row_class: Any,
             properties_class: Any
     ) -> None:
+        """
+        Populates the newly created manifest and properties tables with the correct data.
+        """
         session = session_factory()
         manifest_rows = [
             manifest_row_class(generator_id=i) for i in range(cls.MAX_GENERATOR_ID)
