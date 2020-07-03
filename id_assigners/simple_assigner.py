@@ -115,5 +115,8 @@ class SimpleAssigner(BaseAssigner):
             current_timestamp_ms: int,
             generator_id: int
     ) -> None:
+        """
+        Writes the latest timestamp at which the Snowfall instance is alive to the manifest.
+        """
         self._manifest[generator_id] = current_timestamp_ms
         self._last_alive_ms = current_timestamp_ms

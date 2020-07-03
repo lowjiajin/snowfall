@@ -8,6 +8,10 @@ from utils import get_current_timestamp_ms
 class BaseAssigner(ABC):
 
     def __init__(self):
+        """
+        All assigners have a background task which updates the liveliness of its Snowfall instance in the manifest
+        at periodic intervals
+        """
         self.scheduler = BackgroundScheduler()
         self.scheduler.add_job(
             func=self.update_liveliness_job,
@@ -20,6 +24,9 @@ class BaseAssigner(ABC):
             self,
             current_timestamp_ms: int
     ):
+        """
+        The assigner, and by extension its Snowfall instance, is alive iff its generator id is still reserved.
+        """
         ms_since_last_updated = current_timestamp_ms - self.last_alive_ms
         if ms_since_last_updated <= self.ms_to_release_generator_id:
             return True
