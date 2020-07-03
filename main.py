@@ -80,14 +80,3 @@ class Snowfall:
         guid = ms_since_epoch_part + looping_count_part + self.generator_id
         self.guid_last_generated_at = ms_since_epoch
         return guid
-
-
-SimpleSyncer.create_schema_group(schema_group_name="foo")
-generator_1 = Snowfall(generator_syncer_type=SimpleSyncer, schema_group_name="foo")
-generator_2 = Snowfall(generator_syncer_type=SimpleSyncer, schema_group_name="foo")
-print(generator_1.generator_id, generator_2.generator_id)
-
-for x in range(10):
-    print(f"Generator 1: {generator_1.get_guid()}")
-    print(f"Generator 2: {generator_2.get_guid()}")
-    sleep(1)
