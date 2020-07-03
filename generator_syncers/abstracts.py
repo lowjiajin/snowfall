@@ -5,7 +5,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from utils import get_current_timestamp_ms
 
 
-class BaseAssigner(ABC):
+class BaseSyncer(ABC):
 
     def __init__(self):
         """

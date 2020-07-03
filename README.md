@@ -19,7 +19,7 @@ As such, Snowfall returns unique GUIDs for as long as:
 
 ## Developer Guide
 ### Installation
-A complete installation of Snowfall with all [`id_assigners`](#enforcing-unique-generator_ids) and their dependencies.
+A complete installation of Snowfall with all [`generator_syncers`](#enforcing-unique-generator_ids) and their dependencies.
 ```
 pip install snowfall
 ```
@@ -43,23 +43,23 @@ id_generator.get_guid()
 ```
 
 ### Enforcing unique `generator_ids`
-The global uniqueness of Snowfall's IDs only hold if each Snowfall instance has a unique `generator_id`. Ideally, we want to throw an exception when an instance is initialized with a `generator_id` that is already in use. 
+The global uniqueness of Snowfall's IDs only hold if each Snowfall instance reserves a unique [`generator_id`](#guid-specification). Ideally, we want to throw an exception when an instance is initialized with a `generator_id` that is already in use. 
 
-The `id_assigners` module contains classes that enforce this constraint by automating the assignment of `generator_ids` to Snowfall instances, using a shared manifest of available and reserved `generator_ids`. If all available `generator_ids` are reserved by active Snowfall instances, further attempts at instantiation would result in an `OverflowError`.
+The `generator_syncers` module contains classes that enforce this constraint by automating the reservation and release of `generator_ids` by Snowfall instances, using a shared manifest. If all available `generator_ids` are reserved by active Snowfall instances, further attempts at instantiation would result in an `OverflowError`.
 
 #### For single-process projects
-For single-process projects, we provide a `SimpleIDAssigner` that records the _manifest as a Python data structure. First, create a new global schema group, and then bind the Snowfall instance to it.
+For single-process projects, we provide a `SimpleSyncer` that records the _manifest as a Python data structure. First, create a new global schema group, and then bind the Snowfall instance to it.
 ```
 from datetime import datetime
 from snowfall import Snowfall
-from snowfall.id_assigners.simple_assigner import SimpleAssigner
+from snowfall.generator_syncers.simple_assigner import SimpleSyncer
 
-SimpleAssigner.create_schema_group(
+SimpleSyncer.create_schema_group(
     schema_group_name="example_schema_group"
 )
 
 id_generator = Snowfall(
-    id_assigner_type=SimpleAssigner,
+    generator_syncer_type=SimpleSyncer,
     schema_group_name="example_schema_group"
 )
 ```
@@ -67,7 +67,7 @@ id_generator = Snowfall(
 You can also customize the liveliness probe frequency and the epoch start as follows:
 
 ```
-SimpleAssigner.create_schema_group(
+SimpleSyncer.create_schema_group(
     schema_group_name="example_schema_group"
     liveliness_probe_s=10
     epoch_start=datetime(2020, 1, 1)
@@ -75,25 +75,25 @@ SimpleAssigner.create_schema_group(
 ```
 
 #### For multi-process or distributed projects
-For multi-process, multi-container projects, we need to persist the `generator_id` assignment and liveliness information to a database shared by all containers writing to the same schema. For this, we provide a `DatabaseAssigner` that supports any SQLAlchemy-compatible database.
+For multi-process, multi-container projects, we need to persist the `generator_id` assignment and liveliness information to a database shared by all containers writing to the same schema. For this, we provide a `DatabaseSyncer` that supports any SQLAlchemy-compatible database.
 
 > :warning: **Instantiating assigners**: All database assigners wih the same `engine_url` need to share the same `epoch_start` Otherwise, a ValueError is thrown.
 
-> :warning: **Permissions required**: The `DatabaseAssigner` creates new tables `snowfall_properties` and `snowfall__manifest`, and performs CRUD operations on them.
+> :warning: **Permissions required**: The `DatabaseSyncer` creates new tables `snowfall_properties` and `snowfall__manifest`, and performs CRUD operations on them.
 
 ```
 from datetime import datetime
 from snowfall import Snowfall
-from snowfall.id_assigners.database_assigner import DatabaseAssigner
+from snowfall.generator_syncers.database_assigner import DatabaseSyncer
 
-DatabaseAssigner.create_schema_group(
+DatabaseSyncer.create_schema_group(
     schema_group_name="example_schema_group"
     liveliness_probe_s=10,
     epoch_start=datetime(2020, 1, 1)
 )
 
 id_generator = Snowfall(=
-    id_assigner_type=DatabaseAssigner,
+    generator_syncer_type=DatabaseSyncer,
     engine_url="postgresql://user:pass@host:port/db"
 )
 ```

@@ -2,7 +2,7 @@ from datetime import datetime
 from collections import namedtuple
 import numpy as np
 
-from id_assigners.abstracts import BaseAssigner
+from generator_syncers.abstracts import BaseSyncer
 from utils import get_current_timestamp_ms
 
 
@@ -12,7 +12,7 @@ SchemaGroup = namedtuple(
 )
 
 
-class SimpleAssigner(BaseAssigner):
+class SimpleSyncer(BaseSyncer):
 
     PROBE_MISSES_TO_RELEASE = 2
     MAX_GENERATOR_ID = 2 ** 12 - 1
@@ -24,8 +24,8 @@ class SimpleAssigner(BaseAssigner):
             schema_group_name: str = "default"
     ):
         """
-        A SimpleAssigner instance that reserves a generator_id for its associated Snowfall instance.
-        :param schema_group_name: The schema group we want to associate this SimpleAssigner with.
+        A SimpleSyncer instance that reserves a generator_id for its associated Snowfall instance.
+        :param schema_group_name: The schema group we want to associate this SimpleSyncer with.
         """
         schema_group = self.schema_groups.get(schema_group_name)
 
@@ -70,7 +70,7 @@ class SimpleAssigner(BaseAssigner):
         """
         Adds a schema group object to the class
         :param schema_group_name:  Unique name that identifies the schema group.
-        :param liveliness_probe_s: Frequency with which the SimpleAssigner instances update their liveliness
+        :param liveliness_probe_s: Frequency with which the SimpleSyncer instances update their liveliness
                                     in the _manifest.
         :param epoch_start_date:   GUIDs are unique for up to 2^41ms (~70 years) from the epoch start date.
         """

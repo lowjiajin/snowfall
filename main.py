@@ -2,8 +2,8 @@ from typing import Type
 from datetime import datetime
 from time import sleep
 
-from id_assigners.abstracts import BaseAssigner
-from id_assigners.simple_assigner import SimpleAssigner
+from generator_syncers.abstracts import BaseSyncer
+from generator_syncers.simple_assigner import SimpleSyncer
 from utils import get_current_timestamp_ms
 
 
@@ -14,17 +14,17 @@ class Snowfall:
 
     def __init__(
             self,
-            id_assigner_type: Type[BaseAssigner] = SimpleAssigner,
+            generator_syncer_type: Type[BaseSyncer] = SimpleSyncer,
             **kwargs
     ):
         """
         A Snowfall object that generates GUIDs.
-        :param id_assigner_type: Specify a IDAssigner class. An IDAssigner instance will be created to coordinate
+        :param generator_syncer_type: Specify a IDSyncer class. An IDSyncer instance will be created to coordinate
                                  the generator_id and epoch_start across multiple Snowfall instances.
         """
-        self.id_assigner = id_assigner_type(**kwargs)
-        self.generator_id = self.id_assigner.generator_id
-        self.EPOCH_START_MS = int(self.id_assigner.epoch_start_date.timestamp() * 1000)
+        self.generator_syncer = generator_syncer_type(**kwargs)
+        self.generator_id = self.generator_syncer.generator_id
+        self.EPOCH_START_MS = int(self.generator_syncer.epoch_start_date.timestamp() * 1000)
         self.looping_counter = 0
         self.guid_last_generated_at = self.EPOCH_START_MS
 
@@ -44,7 +44,7 @@ class Snowfall:
         current_timestamp_ms = get_current_timestamp_ms()
         ms_since_epoch = current_timestamp_ms - self.EPOCH_START_MS
 
-        if not self.id_assigner.is_alive(current_timestamp_ms=current_timestamp_ms):
+        if not self.generator_syncer.is_alive(current_timestamp_ms=current_timestamp_ms):
             raise RuntimeError("Generator ID no longer reserved by this instance.")
         elif ms_since_epoch > self.MAX_MS_SINCE_EPOCH:
             raise OverflowError(f"ms_since_epoch: {ms_since_epoch}, it has been >2^41ms since epoch_start")
@@ -80,3 +80,14 @@ class Snowfall:
         guid = ms_since_epoch_part + looping_count_part + self.generator_id
         self.guid_last_generated_at = ms_since_epoch
         return guid
+
+
+SimpleSyncer.create_schema_group(schema_group_name="foo")
+generator_1 = Snowfall(generator_syncer_type=SimpleSyncer, schema_group_name="foo")
+generator_2 = Snowfall(generator_syncer_type=SimpleSyncer, schema_group_name="foo")
+print(generator_1.generator_id, generator_2.generator_id)
+
+for x in range(10):
+    print(f"Generator 1: {generator_1.get_guid()}")
+    print(f"Generator 2: {generator_2.get_guid()}")
+    sleep(1)
