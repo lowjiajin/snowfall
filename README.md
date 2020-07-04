@@ -87,18 +87,23 @@ When we have multiple `Snowfall` instances generating concurrently across multip
 
 > :warning: **Permissions required**: The `DatabaseSyncer` creates new tables `snowfall_{schema_group_name}_properties` and `snowfall_{schema_group_name}_manifest`, and performs CRUD operations on them.
 
+First, create the schema group. Because this operation creates the relevant tables in the database of your choice, it should only be done once. You can also access this function via the terminal as `create_db_schema_group`.
 ```
-from datetime import datetime
-from snowfall import Snowfall
 from snowfall.generator_syncers import DatabaseSyncer
 
 DatabaseSyncer.create_schema_group(
     schema_group_name="example_schema_group",
     engine_url="dbms://user:pass@host:port/db"
 )
+```
+
+Next, just start a `Snowfall` anywhere you want, and point it to the schema group you created.
+```
+from snowfall import Snowfall
 
 id_generator = Snowfall(=
     generator_syncer_type=DatabaseSyncer,
+    schema_group_name="example_schema_group",
     engine_url="dbms://user:pass@host:port/db"
 )
 ```
