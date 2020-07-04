@@ -1,9 +1,9 @@
 from datetime import datetime
+from collections import namedtuple
 from time import sleep
-from random import random
+from random import uniform
 from typing import Tuple, Any
-from sqlalchemy import create_engine, Column, String, SmallInteger, BigInteger, CheckConstraint
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import create_engine, Column, String, SmallInteger, BigInteger
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.orm.scoping import ScopedSession
 from sqlalchemy.ext.declarative import declarative_base
@@ -13,9 +13,19 @@ from snowfall.generator_syncers.abstracts import BaseSyncer
 from snowfall.utils import get_current_timestamp_ms
 
 
-class DatabaseSyncer(BaseSyncer):
+PropertiesTuple = namedtuple(
+        typename="PropertiesTuple",
+        field_names=(
+            "liveliness_probe_s",
+            "epoch_start_ms",
+            "max_claim_retries",
+            "min_ms_between_claim_retries",
+            "max_ms_between_claim_retries"
+        )
+)
 
-    MAX_CLAIM_RETRIES = 3
+
+class DatabaseSyncer(BaseSyncer):
 
     def __init__(
             self,
@@ -37,7 +47,12 @@ class DatabaseSyncer(BaseSyncer):
             base=base,
             schema_group_name=schema_group_name
         )
-        self._liveliness_probe_s, self._epoch_start_ms = self.get_properties()
+        properties_tuple = self.get_properties()
+        self._liveliness_probe_s = properties_tuple.liveliness_probe_s
+        self._epoch_start_ms = properties_tuple.epoch_start_ms
+        self._max_claim_retries = properties_tuple.max_claim_retries
+        self._min_ms_between_claim_retries = properties_tuple.min_ms_between_claim_retries
+        self._max_ms_between_claim_retries = properties_tuple.max_ms_between_claim_retries
         self._ms_to_release_generator_id = self._liveliness_probe_s * 1000 * self.PROBE_MISSES_TO_RELEASE
         super().__init__()
 
@@ -67,15 +82,21 @@ class DatabaseSyncer(BaseSyncer):
             schema_group_name: str = "default",
             liveliness_probe_s: int = 5,
             epoch_start_date: datetime = datetime(2020, 1, 1),
+            max_claim_retries: int = 3,
+            min_ms_between_claim_retries: int = 100,
+            max_ms_between_claim_retries: int = 500,
             engine_url: str = "sqlite:////tmp/test.db"
     ) -> None:
         """
         Adds a schema group object to the class
-        :param schema_group_name:  Unique name that identifies the schema group.
-        :param liveliness_probe_s: Frequency with which the SimpleSyncer instances update their liveliness
-                                    in the manifest.
-        :param epoch_start_date:   GUIDs are unique for up to 2^41ms (~70 years) from the epoch start date.
-        :param engine_url: The URL to connect to the database: "dbms_type://user:pass@host:port/db"
+        :param schema_group_name:            Unique name that identifies the schema group.
+        :param liveliness_probe_s:           Frequency with which the SimpleSyncer instances update their liveliness
+                                             in the manifest.
+        :param epoch_start_date:             GUIDs are unique for up to 2^41ms (~70 years) from the epoch start date.
+        :param max_claim_retries:            Lorem
+        :param min_ms_between_claim_retries: Lorem
+        :param max_ms_between_claim_retries: Lorem
+        :param engine_url:                   The URL to connect to the database: "dbms_type://user:pass@host:port/db"
         """
         if epoch_start_date > datetime.utcnow():
             raise ValueError(f"epoch_start_date: {epoch_start_date} cannot be in the future of the current UTC time.")
@@ -95,6 +116,9 @@ class DatabaseSyncer(BaseSyncer):
             session_factory=session_factory,
             liveliness_probe_s=liveliness_probe_s,
             epoch_start_date=epoch_start_date,
+            max_claim_retries=max_claim_retries,
+            min_ms_between_claim_retries=min_ms_between_claim_retries,
+            max_ms_between_claim_retries=max_ms_between_claim_retries,
             manifest_row_class=manifest_row_class,
             properties_class=properties_class
         )
@@ -126,10 +150,6 @@ class DatabaseSyncer(BaseSyncer):
             __tablename__ = manifest_table_name
             generator_id = Column(SmallInteger, primary_key=True)
             last_updated_ms = Column(BigInteger, nullable=False, default=0)
-            race_condition_ticker = Column(SmallInteger, nullable=False, default=0)
-            __table_args__ = (
-                CheckConstraint("race_condition_ticker in (0, 1)"),
-            )
 
         class Properties(base):
             __tablename__ = properties_table_name
@@ -161,6 +181,9 @@ class DatabaseSyncer(BaseSyncer):
             session_factory: ScopedSession,
             liveliness_probe_s: int,
             epoch_start_date: datetime,
+            max_claim_retries: int,
+            min_ms_between_claim_retries: int,
+            max_ms_between_claim_retries: int,
             manifest_row_class: Any,
             properties_class: Any
     ) -> None:
@@ -173,7 +196,10 @@ class DatabaseSyncer(BaseSyncer):
         ]
         properties = [
             properties_class(key="liveliness_probe_s", value=liveliness_probe_s),
-            properties_class(key="epoch_start_ms", value=epoch_start_date.timestamp())
+            properties_class(key="epoch_start_ms", value=epoch_start_date.timestamp()),
+            properties_class(key="max_claim_retries", value=max_claim_retries),
+            properties_class(key="min_ms_between_claim_retries", value=min_ms_between_claim_retries),
+            properties_class(key="max_ms_between_claim_retries", value=max_ms_between_claim_retries)
         ]
         session.bulk_save_objects(manifest_rows)
         session.bulk_save_objects(properties)
@@ -190,15 +216,12 @@ class DatabaseSyncer(BaseSyncer):
             release_threshold_ms = current_timestamp_ms - self._ms_to_release_generator_id
             released = session.query(self.manifest_row_class) \
                 .filter(self.manifest_row_class.last_updated_ms < release_threshold_ms) \
+                .with_for_update() \
                 .first()
 
             if released is not None:
                 released_id = released.generator_id
                 released.last_updated_ms = current_timestamp_ms
-                if released.race_condition_ticker == 0:
-                    released.race_condition_ticker += 1
-                else:
-                    released.race_condition_ticker -= 1
                 session.commit()
                 self._last_alive_ms = current_timestamp_ms
                 return released_id
@@ -208,12 +231,19 @@ class DatabaseSyncer(BaseSyncer):
         generator_id = None
         session = self.session_factory()
         tries = 0
-        while generator_id is None and tries <= self.MAX_CLAIM_RETRIES:
+        while generator_id is None and tries <= self._max_claim_retries:
             try:
                 tries += 1
                 generator_id = try_to_claim()
-            except IntegrityError:
-                sleep(random() / 5)
+            except OverflowError as error:
+                if tries < self._max_claim_retries:
+                    ms_to_sleep = uniform(
+                        self._min_ms_between_claim_retries,
+                        self._max_ms_between_claim_retries
+                    )
+                    sleep(ms_to_sleep)
+                else:
+                    raise error
         self.session_factory.remove()
 
         if generator_id is not None:
@@ -230,14 +260,17 @@ class DatabaseSyncer(BaseSyncer):
         Writes the latest timestamp at which the Snowfall instance is alive to the manifest.
         """
         session = self.session_factory()
-        session.query(self.manifest_row_class) \
+        num_rows_updated = session.query(self.manifest_row_class) \
             .filter_by(generator_id=generator_id) \
+            .filter_by(last_updated_ms=self._last_alive_ms) \
             .update({"last_updated_ms": current_timestamp_ms})
+        if num_rows_updated == 0:
+            raise RuntimeError("Generator id claimed by another Snowfall instance.")
         session.commit()
         self.session_factory.remove()
         self._last_alive_ms = current_timestamp_ms
 
-    def get_properties(self) -> Tuple[int, int]:
+    def get_properties(self) -> PropertiesTuple:
         session = self.session_factory()
         liveliness_probe_s = session.query(self.properties_class) \
             .filter_by(key="liveliness_probe_s") \
@@ -245,5 +278,20 @@ class DatabaseSyncer(BaseSyncer):
         epoch_start_ms = session.query(self.properties_class) \
             .filter_by(key="epoch_start_ms") \
             .one().value
+        max_claim_retries = session.query(self.properties_class) \
+            .filter_by(key="max_claim_retries") \
+            .one().value
+        min_ms_between_claim_retries = session.query(self.properties_class) \
+            .filter_by(key="min_ms_between_claim_retries") \
+            .one().value
+        max_ms_between_claim_retries = session.query(self.properties_class) \
+            .filter_by(key="min_ms_between_claim_retries") \
+            .one().value
         self.session_factory.remove()
-        return liveliness_probe_s, epoch_start_ms
+        return PropertiesTuple(
+            liveliness_probe_s=liveliness_probe_s,
+            epoch_start_ms=epoch_start_ms,
+            max_claim_retries=max_claim_retries,
+            min_ms_between_claim_retries=min_ms_between_claim_retries,
+            max_ms_between_claim_retries=max_ms_between_claim_retries
+        )
