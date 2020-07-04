@@ -17,7 +17,12 @@ As such, Snowfall returns unique GUIDs for as long as:
 2. No more than `2048` GUIDs are generated within one ms.
 3. The lifetime of the system is no more than `2^41ms` (~70 years) from the epoch time set.
 
-## Developer Guide
+## User Guide
+### Terminology
+- *Snowfall instance:* The GUID generator, reserves a unique `generator_id`.
+- *Syncer instance:* Associated with one generator. Ensures that no other generator in the schema group is using its `generator_id`.
+- *Schema group:* A grouping of generators that always produce globally unique IDs.
+
 ### Installation
 A complete installation of Snowfall with all [`generator_syncers`](#enforcing-unique-generator_ids) and their dependencies.
 ```
@@ -45,14 +50,14 @@ id_generator.get_guid()
 ```
 
 ### Enforcing unique `generator_ids`
-The global uniqueness of Snowfall's IDs only hold if each Snowfall instance reserves a unique [`generator_id`](#guid-specification). Ideally, we want to throw an exception when an instance is initialized with a `generator_id` that is already in use. 
+The global uniqueness of Snowfall's GUIDs only hold if each Snowfall instance reserves a unique [`generator_id`](#guid-specification). Ideally, we want to automate the reservation of `generator_ids` by Snowfall instances, and their release when not in use.
 
-The `generator_syncers` module contains classes that enforce this constraint by automating the reservation and release of `generator_ids` by Snowfall instances, using a shared manifest. If all available `generator_ids` are reserved by active Snowfall instances, further attempts at instantiation would result in an `OverflowError`.
+The `generator_syncers` module contains classes that enforce this constraint, by updating a shared manifest. If all available `generator_ids` are reserved by active Snowfall instances, further attempts at instantiation would result in an `OverflowError`.
 
 #### For single-process projects
-For single-process projects, we provide a `SimpleSyncer` that records the manifest as a Python data structure. First, create a new global schema group, and then bind the Snowfall instance to it.
+While most usages of `Snowfall` apply to setups where GUIDs are produced concurrently by multiple machines and/or processes, we nevertheless support a non-networked solution for single-process use cases. E.g. test environments, local prototyping, etc.
 
-All `Snowfall` instances that share the same schema group will not create duplicate GUIDs.
+The `SimpleSyncer` records the manifest in-memory, persistence to disk is not required for uniqueness. To set it up, create a new global schema group, and then bind the Snowfall instance to it.
 ```
 from snowfall import Snowfall
 from snowfall.generator_syncers import SimpleSyncer
@@ -78,9 +83,7 @@ SimpleSyncer.create_schema_group(
 ```
 
 #### For multi-process or distributed projects
-For multi-process, multi-container projects, we need to persist the `generator_id` assignment and liveliness information to a database shared by all containers writing to the same schema. For this, we provide a `DatabaseSyncer` that supports any SQLAlchemy-compatible database.
-
-> :warning: **Instantiating syncers**: All database syncers with the same `engine_url` need to share the same `epoch_start` Otherwise, a ValueError is thrown.
+When we have multiple `Snowfall` instances generating concurrently across multiple processes or machines, we need to persist the `generator_id` assignment and liveliness information to a database shared by all containers writing to the same schema. For this, we provide a `DatabaseSyncer` that supports any SQLAlchemy-compatible database.
 
 > :warning: **Permissions required**: The `DatabaseSyncer` creates new tables `snowfall_{schema_group_name}_properties` and `snowfall_{schema_group_name}_manifest`, and performs CRUD operations on them.
 
@@ -90,16 +93,29 @@ from snowfall import Snowfall
 from snowfall.generator_syncers import DatabaseSyncer
 
 DatabaseSyncer.create_schema_group(
-    schema_group_name="example_schema_group"
-    liveliness_probe_s=10,
-    epoch_start_date=datetime(2020, 1, 1)
+    schema_group_name="example_schema_group",
+    engine_url="dbms://user:pass@host:port/db"
 )
 
 id_generator = Snowfall(=
     generator_syncer_type=DatabaseSyncer,
-    engine_url="postgresql://user:pass@host:port/db"
+    engine_url="dbms://user:pass@host:port/db"
 )
 ```
+
+The `create_schema_group` method also supports other keyword arguments. Shown here are the defaults:
+```
+DatabaseSyncer.create_schema_group(
+    liveliness_probe_s = 5,
+    epoch_start_date = datetime(2020, 1, 1),
+    max_claim_retries = 3,
+    min_ms_between_claim_retries = 100,
+    max_ms_between_claim_retries = 500,
+    engine_url = "sqlite:////tmp/test.db"
+)
+```
+
+Note that the default behaviour for the `engine_url` is to create a sqlite database in a temporary directory. We recommend switching this out for a client-server DBMS of your choice.
 
 #### Technical notes
 A `generator_id` is reserved for as long as the Snowfall instance is capable of transmitting liveliness information to the generator manifest, and released when the last liveliness update was more than a set amount of time ago. This time is set with `liveliness_probe_ms`.
