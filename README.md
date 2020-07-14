@@ -24,9 +24,19 @@ As such, Snowfall returns unique GUIDs for as long as:
 - *Schema group:* A grouping of generators that always produce globally unique IDs.
 
 ### Installation
-A complete installation of Snowfall with all [`generator_syncers`](#enforcing-unique-generator_ids) and their dependencies.
+A minimal installation of Snowfall. This supports both the `SimpleSyncer`, and the `DatabaseSyncer` when used with SQLite.
 ```
 pip install snowfall
+```
+
+#### DBMS-specific dependencies
+However, because the `DatabaseSyncer` uses SQLAlchemy to connect to the database, there are optional dependencies depending on the DBMS used. For instance, MySQL requires the `MySQL-python` package, while PostgreSQL requires `psycopg2`. More information can be found in the [SQLAlchemy docs](https://docs.sqlalchemy.org/en/latest/core/engines.html).
+
+For convenience, we have included the following pip extras:
+```
+pip install snowfall[postgres]
+pip install snowfall[mysql]
+pip install snowfall[oracle]
 ```
 
 ### Quickstart

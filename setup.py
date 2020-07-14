@@ -8,7 +8,7 @@ with open('requirements.txt') as f:
 
 setup(
     name="snowfall",
-    version="1.0.3",
+    version="1.0.4",
     description="Bigint-based distributed GUID generator",
     long_description=(HERE / "README.md").read_text(),
     long_description_content_type="text/markdown",
@@ -28,4 +28,9 @@ setup(
             "create_db_schema_group=src.generator_syncers.database_syncers:create_schema_group",
         ]
     },
+    extras_require={
+        "postgres": ["psycopg2-binary==2.8.5"],
+        "mysql": ["MySQL-python==1.2.5"],
+        "oracle": ["cx-Oracle==8.0.0"]
+    }
 )
