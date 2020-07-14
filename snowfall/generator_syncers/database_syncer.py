@@ -155,7 +155,7 @@ class DatabaseSyncer(BaseSyncer):
 
         class Properties(base):
             __tablename__ = properties_table_name
-            key = Column(String(16), primary_key=True)
+            key = Column(String(32), primary_key=True)
             value = Column(BigInteger, nullable=False)
 
         return manifest_table_name, properties_table_name, ManifestRow, Properties
