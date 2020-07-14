@@ -14,7 +14,7 @@ A Snowfall GUID consists of:
 
 As such, Snowfall returns unique GUIDs for as long as:
 1. The generator id is within `[0, 4096)`.
-2. No more than `2048` GUIDs are generated within one ms.
+2. No more than `2048` GUIDs are generated within one ms per generator id.
 3. The lifetime of the system is no more than `2^41ms` (~70 years) from the epoch time set.
 
 ## User Guide

@@ -8,6 +8,7 @@ from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.orm.scoping import ScopedSession
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.engine.base import Engine
+import logging
 
 from snowfall.generator_syncers.abstracts import BaseSyncer
 from snowfall.utils import get_current_timestamp_ms
@@ -143,6 +144,7 @@ class DatabaseSyncer(BaseSyncer):
         """
         Defines the base classes that map to tables in our DBMS, and their columns.
         """
+        logging.info("Generating ORM classes")
         manifest_table_name = f"snowfall_{schema_group_name}_manifest"
         properties_table_name = f"snowfall_{schema_group_name}_properties"
 
@@ -168,6 +170,7 @@ class DatabaseSyncer(BaseSyncer):
         """
         One-time operation to create the manifest and properties tables if they don't already exist.
         """
+        logging.info("Creating manifest and properties tables")
         if engine.dialect.has_table(engine, manifest_table_name):
             raise RuntimeError(f"Manifest for schema group: {manifest_table_name} already exists in database.")
         elif engine.dialect.has_table(engine, properties_table_name):
@@ -201,7 +204,9 @@ class DatabaseSyncer(BaseSyncer):
             properties_class(key="min_ms_between_claim_retries", value=min_ms_between_claim_retries),
             properties_class(key="max_ms_between_claim_retries", value=max_ms_between_claim_retries)
         ]
+        logging.info("Populating manifest table")
         session.bulk_save_objects(manifest_rows)
+        logging.info("Populating properties table")
         session.bulk_save_objects(properties)
         session.commit()
         session_factory.remove()
@@ -212,6 +217,7 @@ class DatabaseSyncer(BaseSyncer):
         checks, and then claims the first such generator id as reserved.
         """
         def try_to_claim():
+            logging.info("Attempting to claim generator id")
             current_timestamp_ms = get_current_timestamp_ms()
             release_threshold_ms = current_timestamp_ms - self._ms_to_release_generator_id
             released = session.query(self.manifest_row_class) \
@@ -223,6 +229,7 @@ class DatabaseSyncer(BaseSyncer):
                 released_id = released.generator_id
                 released.last_updated_ms = current_timestamp_ms
                 session.commit()
+                logging.info(f"Claimed generator id {released_id}")
                 self._last_alive_ms = current_timestamp_ms
                 return released_id
             else:
@@ -259,6 +266,7 @@ class DatabaseSyncer(BaseSyncer):
         """
         Writes the latest timestamp at which the Snowfall instance is alive to the manifest.
         """
+        logging.debug("Attempting to update liveliness in manifest")
         session = self.session_factory()
         num_rows_updated = session.query(self.manifest_row_class) \
             .filter_by(generator_id=generator_id) \
@@ -267,10 +275,12 @@ class DatabaseSyncer(BaseSyncer):
         if num_rows_updated == 0:
             raise RuntimeError("Generator id claimed by another Snowfall instance.")
         session.commit()
+        logging.debug(f"Liveliness updated to timestamp: {current_timestamp_ms}")
         self.session_factory.remove()
         self._last_alive_ms = current_timestamp_ms
 
     def get_properties(self) -> PropertiesTuple:
+        logging.info("Getting properties from database")
         session = self.session_factory()
         liveliness_probe_s = session.query(self.properties_class) \
             .filter_by(key="liveliness_probe_s") \

@@ -8,7 +8,7 @@ with open('requirements.txt') as f:
 
 setup(
     name="snowfall",
-    version="1.0.2",
+    version="1.0.3",
     description="Bigint-based distributed GUID generator",
     long_description=(HERE / "README.md").read_text(),
     long_description_content_type="text/markdown",
