@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from apscheduler.schedulers.background import BackgroundScheduler
+import logging
 
 from snowfall.utils import get_current_timestamp_ms
 
@@ -14,6 +15,7 @@ class BaseSyncer(ABC):
         All syncers have a background task which updates the liveliness of its Snowfall instance in the manifest
         at periodic intervals
         """
+        logging.info("Initializing generator syncer base class with liveliness scheduler")
         self.scheduler = BackgroundScheduler()
         self.scheduler.add_job(
             func=self.update_liveliness_job,
