@@ -8,6 +8,7 @@ from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.orm.scoping import ScopedSession
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.engine.base import Engine
+from sqlalchemy.exc import InvalidRequestError
 import logging
 
 from snowfall.generator_syncers.abstracts import BaseSyncer
@@ -39,15 +40,12 @@ class DatabaseSyncer(BaseSyncer):
         :param schema_group_name: The schema group we want to associate this SimpleSyncer with.
         """
         self.engine, self.session_factory, base = self._initialize_orm(engine_url)
-        (
-            self.manifest_table_name,
-            self.properties_table_name,
-            self.manifest_row_class,
-            self.properties_class
-        ) = self._generate_orm_classes(
+        self.manifest_row_class, self.properties_class = self._generate_orm_classes(
             base=base,
             schema_group_name=schema_group_name
         )
+        self.manifest_table_name = self.manifest_row_class.__tablename__
+        self.properties_table_name = self.properties_class.__tablename__
         properties_tuple = self.get_properties()
         self._liveliness_probe_s = properties_tuple.liveliness_probe_s
         self._epoch_start_ms = properties_tuple.epoch_start_ms
@@ -103,15 +101,15 @@ class DatabaseSyncer(BaseSyncer):
             raise ValueError(f"epoch_start_date: {epoch_start_date} cannot be in the future of the current UTC time.")
 
         engine, session_factory, base = cls._initialize_orm(engine_url)
-        manifest_table_name, properties_table_name, manifest_row_class, properties_class = cls._generate_orm_classes(
+        manifest_row_class, properties_class = cls._generate_orm_classes(
             base=base,
             schema_group_name=schema_group_name
         )
         cls._create_sql_tables(
             base=base,
             engine=engine,
-            manifest_table_name=manifest_table_name,
-            properties_table_name=properties_table_name
+            manifest_table_name=manifest_row_class.__tablename__,
+            properties_table_name=properties_class.__tablename__
         )
         cls._insert_initial_rows(
             session_factory=session_factory,
@@ -140,7 +138,7 @@ class DatabaseSyncer(BaseSyncer):
     def _generate_orm_classes(
             base: Any,
             schema_group_name: str
-    ) -> Tuple[str, str, Any, Any]:
+    ) -> Tuple[Any, Any]:
         """
         Defines the base classes that map to tables in our DBMS, and their columns.
         """
@@ -158,7 +156,7 @@ class DatabaseSyncer(BaseSyncer):
             key = Column(String(32), primary_key=True)
             value = Column(BigInteger, nullable=False)
 
-        return manifest_table_name, properties_table_name, ManifestRow, Properties
+        return ManifestRow, Properties
 
     @staticmethod
     def _create_sql_tables(
@@ -204,12 +202,16 @@ class DatabaseSyncer(BaseSyncer):
             properties_class(key="min_ms_between_claim_retries", value=min_ms_between_claim_retries),
             properties_class(key="max_ms_between_claim_retries", value=max_ms_between_claim_retries)
         ]
-        logging.info("Populating manifest table")
-        session.bulk_save_objects(manifest_rows)
-        logging.info("Populating properties table")
-        session.bulk_save_objects(properties)
-        session.commit()
-        session_factory.remove()
+        try:
+            logging.info("Populating manifest table")
+            session.bulk_save_objects(manifest_rows)
+            logging.info("Populating properties table")
+            session.bulk_save_objects(properties)
+            session.commit()
+        except InvalidRequestError:
+            session.rollback()
+        finally:
+            session_factory.remove()
 
     def _claim_generator_id(self) -> int:
         """
@@ -242,8 +244,9 @@ class DatabaseSyncer(BaseSyncer):
             try:
                 tries += 1
                 generator_id = try_to_claim()
-            except OverflowError as error:
+            except (OverflowError, InvalidRequestError) as error:
                 if tries < self._max_claim_retries:
+                    session.rollback()
                     ms_to_sleep = uniform(
                         self._min_ms_between_claim_retries,
                         self._max_ms_between_claim_retries
@@ -268,16 +271,21 @@ class DatabaseSyncer(BaseSyncer):
         """
         logging.debug("Attempting to update liveliness in manifest")
         session = self.session_factory()
-        num_rows_updated = session.query(self.manifest_row_class) \
-            .filter_by(generator_id=generator_id) \
-            .filter_by(last_updated_ms=self._last_alive_ms) \
-            .update({"last_updated_ms": current_timestamp_ms})
-        if num_rows_updated == 0:
-            raise RuntimeError("Generator id claimed by another Snowfall instance.")
-        session.commit()
-        logging.debug(f"Liveliness updated to timestamp: {current_timestamp_ms}")
-        self.session_factory.remove()
-        self._last_alive_ms = current_timestamp_ms
+        try:
+            num_rows_updated = session.query(self.manifest_row_class) \
+                .filter_by(generator_id=generator_id) \
+                .filter_by(last_updated_ms=self._last_alive_ms) \
+                .update({"last_updated_ms": current_timestamp_ms})
+            if num_rows_updated == 0:
+                raise RuntimeError("Generator id claimed by another Snowfall instance.")
+            session.commit()
+            logging.debug(f"Liveliness updated to timestamp: {current_timestamp_ms}")
+            self._last_alive_ms = current_timestamp_ms
+        except InvalidRequestError as err:
+            session.rollback()
+            raise err
+        finally:
+            self.session_factory.remove()
 
     def get_properties(self) -> PropertiesTuple:
         logging.info("Getting properties from database")
