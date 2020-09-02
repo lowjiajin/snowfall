@@ -16,6 +16,9 @@ class BaseSyncer(ABC):
         at periodic intervals
         """
         logging.info("Initializing generator syncer base class with liveliness scheduler")
+        self._last_alive_ms = 0
+        self._generator_id = self._claim_generator_id()
+
         self.scheduler = BackgroundScheduler()
         self.scheduler.add_job(
             func=self.update_liveliness_job,
@@ -23,9 +26,6 @@ class BaseSyncer(ABC):
             seconds=self.liveliness_probe_s,
         )
         self.scheduler.start()
-
-        self._last_alive_ms = 0
-        self._generator_id = self._claim_generator_id()
 
     def is_alive(
             self,
