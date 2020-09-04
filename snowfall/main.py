@@ -1,6 +1,7 @@
 from typing import Type
-from datetime import datetime
+from datetime import datetime, timedelta
 from time import sleep
+import logging
 
 from snowfall.generator_syncers import BaseSyncer, SimpleSyncer
 from snowfall.utils import get_current_timestamp_ms
@@ -17,6 +18,8 @@ class Snowfall:
 
     MAX_MS_SINCE_EPOCH = 2 ** BITS_FOR_MS_SINCE_EPOCH - 1
     MAX_LOOPING_COUNT = 2 ** BITS_FOR_LOOPING_COUNT - 1
+
+    TIMEOUT_TO_RECLAIM_GENERATOR_ID_SECS = timedelta(seconds=5)
 
     def __init__(
             self,
@@ -51,9 +54,15 @@ class Snowfall:
         ms_since_epoch = current_timestamp_ms - self.EPOCH_START_MS
 
         if not self.generator_syncer.is_alive(current_timestamp_ms=current_timestamp_ms):
-            raise RuntimeError("Generator ID no longer reserved by this instance.")
+            logging.warning("Generator ID no longer reserved by this instance.")
+            timeout_start = datetime.now()
+            while not self.generator_syncer.is_alive(current_timestamp_ms=current_timestamp_ms):
+                sleep(1)
+                logging.info("Waiting 1 sec for the liveliness update job to claim a generator ID.")
+                if datetime.now() - timeout_start > self.TIMEOUT_TO_RECLAIM_GENERATOR_ID_SECS:
+                    raise RuntimeError("Failed to claim a generator ID before timeout.")
         elif ms_since_epoch > self.MAX_MS_SINCE_EPOCH:
-            raise OverflowError(f"ms_since_epoch: {ms_since_epoch}, it has been >2^41ms since epoch_start")
+            raise OverflowError(f"ms_since_epoch: {ms_since_epoch}, it has been >2^41ms since epoch_start.")
 
         return ms_since_epoch
 

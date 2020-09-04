@@ -277,7 +277,8 @@ class DatabaseSyncer(BaseSyncer):
                 .filter_by(last_updated_ms=self._last_alive_ms) \
                 .update({"last_updated_ms": current_timestamp_ms})
             if num_rows_updated == 0:
-                raise RuntimeError("Generator id claimed by another Snowfall instance.")
+                logging.warning("Generator id claimed by another Snowfall instance, claiming another id")
+                self._generator_id = self._claim_generator_id()
             session.commit()
             logging.debug(f"Liveliness updated to timestamp: {current_timestamp_ms}")
             self._last_alive_ms = current_timestamp_ms
